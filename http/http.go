@@ -15,7 +15,7 @@ import (
 )
 
 func Init(eng *gin.Engine) {
-	eng.POST("/v1/currency/live", getCurrencyLive)
+	eng.POST("/v1/currencies/live", getCurrencyLive)
 }
 
 type Params struct {
