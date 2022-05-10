@@ -7,6 +7,7 @@ import (
 	"go-currency/service"
 	"go-currency/tool"
 	"strconv"
+	"time"
 
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth/limiter"
@@ -48,11 +49,14 @@ func getCurrencyLive(c *gin.Context) {
 			v.TimeStamp, _ = strconv.ParseInt(times[0], 10, 64)
 		}
 	}
-	//now := time.Now().Unix()
-	//if v.TimeStamp < now-120 || v.TimeStamp > now+120 {
-	//	c.JSON(200, codeErrTime)
-	//	return
-	//}
+	now := time.Now().Unix()
+	if v.TimeStamp < now-120 || v.TimeStamp > now+120 {
+		c.JSON(200, &model.Reply{
+			Message: model.CodeErrTimeMessage,
+			Errno:   model.CodeErrTime,
+		})
+		return
+	}
 	iv := service.CurrencyService.GetIV(v.TimeStamp)
 
 	params, err := tool.GcmDecrypt(v.Params, "6143ec9acb9160154306ffb7d12ee141", []byte(iv))
