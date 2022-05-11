@@ -23,7 +23,8 @@ func Init(eng *gin.Engine) {
 }
 
 type Params struct {
-	TimeStamp int64 `json:"timestamp"`
+	TimeStamp int64             `json:"timestamp"`
+	Params    map[string]string `json:"req_params"`
 }
 
 type FrameParams struct {
@@ -52,6 +53,7 @@ func getCurrencyLive(c *gin.Context) {
 	header := c.Request.Header
 	if header != nil {
 		times, ok := header[XTimeStamp]
+		fmt.Println(times, "times")
 		if !ok {
 			c.JSON(200, &model.Reply{
 				Message: model.CodeErrTimeMessage,

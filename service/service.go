@@ -57,8 +57,8 @@ type CurrencyTimeChange struct {
 }
 
 type CurrencyList struct {
-	Success bool              `json:"success"`
-	Symbols map[string]string `json:"symbols"`
+	Success    bool              `json:"success"`
+	Currencies map[string]string `json:"currencies"`
 }
 
 func Init() {
@@ -207,7 +207,7 @@ func (s *Service) GetCurrencyTimeFrame(ctx context.Context, params map[string]st
 	}
 	timestamp = time.Now().Unix()
 	iv := s.GetIV(timestamp)
-	fmt.Println(currency, "currency")
+	fmt.Println(d, "currency")
 	b, err := tool.GcmEncrypt(string(currency), "6143ec9acb9160154306ffb7d12ee141", []byte(iv))
 	if err != nil {
 		return &model.Reply{
