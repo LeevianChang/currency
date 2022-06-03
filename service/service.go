@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go-currency/model"
 	"go-currency/tool"
+
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -66,22 +67,8 @@ func Init() {
 	ctx := context.Background()
 	CurrencyService.HttpGetCurrencyLive(ctx)
 	CurrencyService.HttpGetCurrencyList(ctx)
-	go CurrencyService.LoopGetCurrencyLive(ctx)
-	go CurrencyService.LoopGetCurrencyList(ctx)
-}
-
-func (s *Service) LoopGetCurrencyLive(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Minute)
-	for range ticker.C {
-		go CurrencyService.HttpGetCurrencyLive(ctx)
-	}
-}
-
-func (s *Service) LoopGetCurrencyList(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Minute)
-	for range ticker.C {
-		go CurrencyService.HttpGetCurrencyList(ctx)
-	}
+	tool.Ticker(CurrencyService.HttpGetCurrencyLive, 30*time.Minute)
+	tool.Ticker(CurrencyService.HttpGetCurrencyList, 30*time.Minute)
 }
 
 func (s *Service) GetIV(timeStamp int64) (res string) {
@@ -150,7 +137,7 @@ func (s *Service) GetCurrencyList(ctx context.Context) (res *model.Reply, timest
 	return
 }
 
-func (s *Service) HttpGetCurrencyLive(ctx context.Context) (code int, res *CurrencyLive) {
+func (s *Service) HttpGetCurrencyLive(ctx context.Context) (err error) {
 	// 处理query
 	//query := fmt.Sprintf("?access_key=%s", accessKey)
 	req, _ := http.NewRequest("GET", liveUrl, nil)
@@ -164,17 +151,20 @@ func (s *Service) HttpGetCurrencyLive(ctx context.Context) (code int, res *Curre
 	//req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
 	resp, err := (&http.Client{Timeout: time.Millisecond * 5000}).Do(req)
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &s.CurrencyLive)
-	fmt.Println(s.CurrencyLive)
-	res = s.CurrencyLive
+	live := &CurrencyLive{}
+	err = json.Unmarshal(body, live)
+	if err != nil {
+		return
+	}
+	s.CurrencyLive = live
 	return
 }
 
-func (s *Service) HttpGetCurrencyList(ctx context.Context) (code int, res *CurrencyList) {
+func (s *Service) HttpGetCurrencyList(ctx context.Context) (err error) {
 	// 处理query
 	//query := fmt.Sprintf("?access_key=%s", accessKey)
 	req, _ := http.NewRequest("GET", listUrl, nil)
@@ -188,13 +178,16 @@ func (s *Service) HttpGetCurrencyList(ctx context.Context) (code int, res *Curre
 	//req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
 	resp, err := (&http.Client{Timeout: time.Millisecond * 5000}).Do(req)
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &s.CurrencyList)
-	fmt.Println(s.CurrencyList)
-	res = s.CurrencyList
+	list := &CurrencyList{}
+	err = json.Unmarshal(body, list)
+	if err != nil {
+		return
+	}
+	s.CurrencyList = list
 	return
 }
 
@@ -207,7 +200,6 @@ func (s *Service) GetCurrencyTimeFrame(ctx context.Context, params map[string]st
 	}
 	timestamp = time.Now().Unix()
 	iv := s.GetIV(timestamp)
-	fmt.Println(d, "currency")
 	b, err := tool.GcmEncrypt(string(currency), "6143ec9acb9160154306ffb7d12ee141", []byte(iv))
 	if err != nil {
 		return &model.Reply{
@@ -231,7 +223,6 @@ func (s *Service) GetCurrencyTimeChange(ctx context.Context, params map[string]s
 	}
 	timestamp = time.Now().Unix()
 	iv := s.GetIV(timestamp)
-	fmt.Println(currency, "currency")
 	b, err := tool.GcmEncrypt(string(currency), "6143ec9acb9160154306ffb7d12ee141", []byte(iv))
 	if err != nil {
 		return &model.Reply{
@@ -264,12 +255,12 @@ func (s *Service) HttpGetCurrencyTimeFrame(ctx context.Context, params map[strin
 	//req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
 	resp, err := (&http.Client{Timeout: time.Millisecond * 1000}).Do(req)
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	res = &CurrencyTimeFrame{}
-	json.Unmarshal(body, res)
+	err = json.Unmarshal(body, res)
 	return
 }
 
@@ -291,11 +282,11 @@ func (s *Service) HttpGetCurrencyChange(ctx context.Context, params map[string]s
 	//req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
 	resp, err := (&http.Client{Timeout: time.Millisecond * 1000}).Do(req)
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	res = &CurrencyTimeChange{}
-	json.Unmarshal(body, res)
+	err = json.Unmarshal(body, res)
 	return
 }
